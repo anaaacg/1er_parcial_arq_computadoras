@@ -221,3 +221,56 @@ const CODE_END   = 0x7F;
 
 const DATA_START = 0x80;
 const DATA_END   = 0xFF;
+
+
+function testMemory() {
+  Logger.log("=== PRUEBAS DE MEMORIA RAM ===");
+
+  // 1. Primera dirección de memoria
+  Write(0x00, 0x00);
+  Logger.log("00h -> " + Read(0x00));
+
+  // 2. Última dirección de memoria
+  Write(0xFF, 0xFF);
+  Logger.log("FFh -> " + Read(0xFF));
+
+  // 3. Dirección intermedia
+  Write(0x80, 0x7A);
+  Logger.log("80h -> " + Read(0x80));
+
+  // 4. Dirección inválida
+  try {
+    Write(256, 10);
+    Logger.log("ERROR: se aceptó una dirección inválida");
+  } catch (error) {
+    Logger.log("OK: dirección 256 rechazada");
+  }
+
+  // 5. Dirección negativa
+  try {
+    Write(-1, 10);
+    Logger.log("ERROR: se aceptó una dirección negativa");
+  } catch (error) {
+    Logger.log("OK: dirección -1 rechazada");
+  }
+
+  // 6. Valor mayor a 8 bits
+  try {
+    Write(0x10, 256);
+    Logger.log("ERROR: se aceptó un valor mayor a 8 bits");
+  } catch (error) {
+    Logger.log("OK: valor 256 rechazado");
+  }
+
+  // 7. Valor negativo
+  try {
+    Write(0x10, -1);
+    Logger.log("ERROR: se aceptó un valor negativo");
+  } catch (error) {
+    Logger.log("OK: valor -1 rechazado");
+  }
+
+  Logger.log("=== FIN DE PRUEBAS ===");
+}
+
+
