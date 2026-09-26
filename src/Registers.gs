@@ -110,3 +110,58 @@ function testFlags() {
     Logger.log("OK: valor de bandera inválido rechazado");
   }
 }
+
+/**
+ * Actualiza las banderas ZF y SF a partir
+ * de un resultado de 8 bits.
+ */
+function updateResultFlags(result) {
+  const byteResult = result & 0xFF;
+
+  // Zero Flag
+  setFlag("ZF", byteResult === 0 ? 1 : 0);
+
+  // Sign Flag: bit más significativo
+  setFlag("SF", (byteResult & 0x80) !== 0 ? 1 : 0);
+}
+
+/**
+ * Actualiza Carry Flag comprobando si un resultado
+ * está fuera del rango sin signo de 8 bits.
+ */
+function updateCarryFlag(result) {
+  setFlag("CF", result > 0xFF || result < 0 ? 1 : 0);
+}
+
+
+function testFlagUpdates() {
+  // Caso 1: resultado cero
+  updateResultFlags(0);
+  updateCarryFlag(0);
+
+  Logger.log(
+    "Resultado 0 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+
+  // Caso 2: bit de signo activo
+  updateResultFlags(128);
+  updateCarryFlag(128);
+
+  Logger.log(
+    "Resultado 128 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+
+  // Caso 3: acarreo
+  updateResultFlags(256);
+  updateCarryFlag(256);
+
+  Logger.log(
+    "Resultado 256 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+}
