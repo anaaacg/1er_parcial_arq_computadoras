@@ -18,6 +18,24 @@ const Flags = {
   SF: 0   // Sign Flag
 };
 
+
+const CPU_SHEET = "CPU";
+
+const REGISTER_CELLS = {
+  PC:  "C4",
+  IR:  "C5",
+  MAR: "C6",
+  MDR: "C7",
+  AX:  "C8",
+  BX:  "C9"
+};
+
+const FLAG_CELLS = {
+  ZF: "F4",
+  CF: "F5",
+  SF: "F6"
+};
+
 /**
  * Escribe un valor de 8 bits en un registro.
  *
@@ -34,6 +52,7 @@ function setRegister(registerName, value) {
   }
 
   Registers[registerName] = value;
+  updateRegisterDisplay(registerName);
 }
 
 /**
@@ -81,6 +100,7 @@ function setFlag(flagName, value) {
   }
 
   Flags[flagName] = value;
+  updateFlagDisplay(flagName);
 }
 
 /**
@@ -133,7 +153,6 @@ function updateCarryFlag(result) {
   setFlag("CF", result > 0xFF || result < 0 ? 1 : 0);
 }
 
-
 function testFlagUpdates() {
   // Caso 1: resultado cero
   updateResultFlags(0);
@@ -164,4 +183,59 @@ function testFlagUpdates() {
     " CF=" + getFlag("CF") +
     " SF=" + getFlag("SF")
   );
+}
+
+/**
+ * Actualiza visualmente un registro en la hoja CPU.
+ */
+function updateRegisterDisplay(registerName) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  const value = getRegister(registerName);
+
+  const hexadecimal = value
+    .toString(16)
+    .toUpperCase()
+    .padStart(2, "0");
+
+  sheet
+    .getRange(REGISTER_CELLS[registerName])
+    .setValue(hexadecimal);
+}
+
+
+/**
+ * Actualiza visualmente una bandera en la hoja CPU.
+ */
+function updateFlagDisplay(flagName) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  sheet
+    .getRange(FLAG_CELLS[flagName])
+    .setValue(getFlag(flagName));
+}
+
+function testCPUDisplay() {
+  setRegister("PC",  0x10);
+  setRegister("IR",  0x20);
+  setRegister("MAR", 0x30);
+  setRegister("MDR", 0x40);
+  setRegister("AX",  0x25);
+  setRegister("BX",  0xFF);
+
+  setFlag("ZF", 1);
+  setFlag("CF", 0);
+  setFlag("SF", 1);
 }
