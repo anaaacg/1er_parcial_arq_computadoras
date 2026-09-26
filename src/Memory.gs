@@ -214,3 +214,10 @@ function testMnemonic() {
   Write(0x20, 0x10);
   inspectMemory(0x20);
 }
+
+// Segmentación lógica de la memoria
+const CODE_START = 0x00;
+const CODE_END   = 0x7F;
+
+const DATA_START = 0x80;
+const DATA_END   = 0xFF;
