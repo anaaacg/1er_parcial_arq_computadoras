@@ -139,3 +139,78 @@ function testRead() {
   const value = Read(0x12);
   Logger.log(value);
 }
+
+
+/**
+ * Muestra en el panel de inspección las diferentes
+ * representaciones del byte almacenado en una dirección.
+ */
+function inspectMemory(address) {
+  if (!isValidAddress(address)) {
+    throw new Error("Dirección de memoria inválida: " + address);
+  }
+
+  const value = Read(address);
+
+  const hexadecimal = value
+    .toString(16)
+    .toUpperCase()
+    .padStart(2, "0");
+
+  const binary = value
+    .toString(2)
+    .padStart(8, "0");
+
+  const decimal = value;
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(MEMORY_SHEET);
+
+  sheet.getRange("T4").setValue(
+    address.toString(16).toUpperCase().padStart(2, "0") + "h"
+  );
+
+  sheet.getRange("T5").setValue(hexadecimal);
+  sheet.getRange("T6").setValue(binary);
+  sheet.getRange("T7").setValue(decimal);
+  sheet.getRange("T8").setValue(getMnemonic(value));
+}
+
+function testInspectMemory() {
+  Write(0x12, 0xAB);
+  inspectMemory(0x12);
+}
+
+/**
+ * Devuelve el mnemónico asociado a un opcode.
+ * Si el byte no corresponde a una instrucción conocida,
+ * devuelve "-".
+ */
+function getMnemonic(value) {
+  const mnemonics = {
+    0x01: "MOV reg, imm",
+    0x02: "MOV reg, reg",
+    0x03: "LOAD reg, [dir]",
+    0x04: "STORE [dir], reg",
+
+    0x10: "ADD reg, imm/reg",
+    0x11: "SUB reg, imm/reg",
+    0x12: "INC reg",
+    0x13: "DEC reg",
+    0x14: "CMP reg, imm/reg",
+
+    0x20: "JMP dir",
+    0x21: "JZ dir",
+    0x22: "JNZ dir",
+
+    0xFF: "HLT"
+  };
+
+  return mnemonics[value] || "-";
+}
+
+function testMnemonic() {
+  Write(0x20, 0x10);
+  inspectMemory(0x20);
+}
