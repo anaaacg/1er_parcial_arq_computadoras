@@ -82,3 +82,58 @@ function testArithmeticOperations() {
   Logger.log("DEC 5 = " + aluDec(5));
   Logger.log("DEC 0 = " + aluDec(0));
 }
+
+/**
+ * AND lógico bit a bit.
+ */
+function aluAnd(a, b) {
+  const result = toByte(a & b);
+
+  updateCarryFlag(0);
+  updateResultFlags(result);
+
+  return result;
+}
+
+/**
+ * OR lógico bit a bit.
+ */
+function aluOr(a, b) {
+  const result = toByte(a | b);
+
+  updateCarryFlag(0);
+  updateResultFlags(result);
+
+  return result;
+}
+
+/**
+ * XOR lógico bit a bit.
+ */
+function aluXor(a, b) {
+  const result = toByte(a ^ b);
+
+  updateCarryFlag(0);
+  updateResultFlags(result);
+
+  return result;
+}
+
+/**
+ * NOT lógico bit a bit.
+ */
+function aluNot(value) {
+  const result = toByte(~value);
+
+  updateCarryFlag(0);
+  updateResultFlags(result);
+
+  return result;
+}
+
+function testLogicalOperations() {
+  Logger.log("AND = " + aluAnd(0x0F, 0x33));
+  Logger.log("OR  = " + aluOr(0x0F, 0x33));
+  Logger.log("XOR = " + aluXor(0x0F, 0x33));
+  Logger.log("NOT = " + aluNot(0x0F));
+}
