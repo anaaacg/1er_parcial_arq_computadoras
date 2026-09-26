@@ -133,7 +133,53 @@ function aluNot(value) {
 
 function testLogicalOperations() {
   Logger.log("AND = " + aluAnd(0x0F, 0x33));
+
   Logger.log("OR  = " + aluOr(0x0F, 0x33));
   Logger.log("XOR = " + aluXor(0x0F, 0x33));
   Logger.log("NOT = " + aluNot(0x0F));
 }
+
+
+/**
+ * Compara dos valores de 8 bits.
+ * Realiza una resta únicamente para actualizar
+ * las banderas, sin almacenar el resultado.
+ */
+function aluCmp(a, b) {
+  const result = a - b;
+
+  updateCarryFlag(result);
+
+  const byteResult = toByte(result);
+  updateResultFlags(byteResult);
+}
+
+function testCmp() {
+  // Valores iguales
+  aluCmp(5, 5);
+
+  Logger.log(
+    "CMP 5,5 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+
+  // Primer valor mayor
+  aluCmp(10, 5);
+
+  Logger.log(
+    "CMP 10,5 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+
+  // Primer valor menor
+  aluCmp(5, 10);
+
+  Logger.log(
+    "CMP 5,10 -> ZF=" + getFlag("ZF") +
+    " CF=" + getFlag("CF") +
+    " SF=" + getFlag("SF")
+  );
+}
+
