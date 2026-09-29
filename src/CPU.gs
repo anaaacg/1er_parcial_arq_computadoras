@@ -291,8 +291,18 @@ function execute() {
       break;
 
     case "LOAD":
-      // Lee el valor almacenado en la dirección indicada.
-      executionResult = Read(instruction.address);
+      // Dirección de memoria → MAR
+      setRegister("MAR", instruction.address);
+
+      // RAM[MAR] → MDR
+      setRegister(
+        "MDR",
+        Read(getRegister("MAR"))
+      );
+
+      // MDR → resultado temporal
+      // Store se encargará de pasarlo al registro destino
+      executionResult = getRegister("MDR");
       break;
 
     case "STORE":
@@ -570,7 +580,6 @@ function testStore() {
 }
 
 
-
 // ============================================
 // CICLO COMPLETO
 // ============================================
@@ -616,5 +625,99 @@ function testInstructionCycle() {
   Logger.log("AX = " + getRegister("AX"));
   Logger.log("Instrucción = " + decodedInstruction.mnemonic);
   Logger.log("Resultado = " + executionResult);
+}
+
+function testMultipleInstructions() {
+
+  // ========================================
+  // PROGRAMA DE PRUEBA
+  //
+  // MOV AX, 05h
+  // ADD AX, 03h
+  // INC AX
+  // ========================================
+
+  // MOV AX, 05h
+  // 01 00 01 05
+  Write(0x00, 0x01);
+  Write(0x01, 0x00);
+  Write(0x02, 0x01);
+  Write(0x03, 0x05);
+
+  // ADD AX, 03h
+  // 10 00 01 03
+  Write(0x04, 0x10);
+  Write(0x05, 0x00);
+  Write(0x06, 0x01);
+  Write(0x07, 0x03);
+
+  // INC AX
+  // 12 00
+  Write(0x08, 0x12);
+  Write(0x09, 0x00);
+
+  // Estado inicial
+  setRegister("PC", 0x00);
+  setRegister("AX", 0x00);
+
+  Logger.log("=== ESTADO INICIAL ===");
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // CICLO 1: MOV AX, 05h
+  // ========================================
+  instructionCycle();
+
+  Logger.log("=== CICLO 1 ===");
+  Logger.log("Instrucción = " + decodedInstruction.mnemonic);
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // CICLO 2: ADD AX, 03h
+  // ========================================
+  instructionCycle();
+
+  Logger.log("=== CICLO 2 ===");
+  Logger.log("Instrucción = " + decodedInstruction.mnemonic);
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // CICLO 3: INC AX
+  // ========================================
+  instructionCycle();
+
+  Logger.log("=== CICLO 3 ===");
+  Logger.log("Instrucción = " + decodedInstruction.mnemonic);
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+}
+
+
+function testLoadWithMarMdr() {
+
+  // Valor de prueba en memoria
+  Write(0x80, 0x25);
+
+  // LOAD AX, [80h]
+  Write(0x00, 0x03);
+  Write(0x01, 0x00);
+  Write(0x02, 0x80);
+
+  setRegister("AX", 0x00);
+  setRegister("PC", 0x00);
+
+  instructionCycle();
+
+  Logger.log("--- LOAD AX, [80h] ---");
+  Logger.log("MAR = " + getRegister("MAR"));
+  Logger.log("MDR = " + getRegister("MDR"));
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("PC = " + getRegister("PC"));
 }
 
