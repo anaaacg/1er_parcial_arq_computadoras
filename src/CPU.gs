@@ -582,3 +582,39 @@ function instructionCycle() {
   store();
 }
 
+function testInstructionCycle() {
+
+  // ========================================
+  // Programa:
+  // ADD AX, 05h
+  //
+  // 00h → 10h  ADD
+  // 01h → 00h  AX
+  // 02h → 01h  Inmediato
+  // 03h → 05h  Valor
+  // ========================================
+
+  Write(0x00, 0x10);
+  Write(0x01, 0x00);
+  Write(0x02, 0x01);
+  Write(0x03, 0x05);
+
+  // Estado inicial
+  setRegister("AX", 0x03);
+  setRegister("PC", 0x00);
+
+  Logger.log("=== ANTES DEL CICLO ===");
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+
+  // UN ciclo completo
+  instructionCycle();
+
+  Logger.log("=== DESPUÉS DEL CICLO ===");
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("IR = " + getRegister("IR"));
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("Instrucción = " + decodedInstruction.mnemonic);
+  Logger.log("Resultado = " + executionResult);
+}
+
