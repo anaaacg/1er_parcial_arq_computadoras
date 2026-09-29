@@ -1000,6 +1000,7 @@ function stepCpu(loadState = true) {
   // directamente desde la interfaz.
   if (loadState) {
     loadExecutionState();
+    updatePhaseDisplay(currentPhase);
   }
 
   if (cpuHalted) {
@@ -1405,6 +1406,7 @@ function resetCpu() {
 
   // Ciclo de instrucción
   currentPhase = "FETCH";
+  updatePhaseDisplay("FETCH");
 
   // Resultados temporales
   decodedInstruction = null;
@@ -1794,4 +1796,16 @@ function loadExecutionState() {
     result !== null && result !== ""
       ? Number(result)
       : null;
+}
+function updatePhaseDisplay(phase) {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("CPU");
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "CPU".');
+  }
+
+  sheet.getRange("F8").setValue(phase);
 }
