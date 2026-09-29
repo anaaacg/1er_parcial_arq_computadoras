@@ -998,17 +998,25 @@ function testHalt() {
  */
 function stepCpu(loadState = true) {
 
-  // Solo recuperar estado cuando STEP se ejecuta
+  // Recuperar estado cuando STEP se ejecuta
   // directamente desde la interfaz.
   if (loadState) {
     loadExecutionState();
-    updatePhaseDisplay(currentPhase);
-    
   }
 
   if (cpuHalted) {
     return;
   }
+
+  // Mostrar la fase que se va a ejecutar
+  updatePhaseDisplay(currentPhase);
+
+  // Registrar una sola entrada por fase
+  addMicroOperationLog(
+    currentPhase,
+    "Fase " + currentPhase + " ejecutada"
+  );
+
 
   switch (currentPhase) {
 
@@ -1447,6 +1455,7 @@ function resetCpu() {
 
   clearRegisterHighlights();  
   clearMemoryHighlight();
+clearMicroOperationLog();
 
   // Resultados temporales
   decodedInstruction = null;
@@ -1922,5 +1931,59 @@ function getActiveRegistersForStore() {
 
     default:
       return [];
+  }
+}
+/**
+ * Agrega una micro-operación al log visual del CPU.
+ *
+ * @param {string} phase Fase ejecutada.
+ * @param {string} operation Descripción de la micro-operación.
+ */
+function addMicroOperationLog(phase, operation) {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("CPU");
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "CPU".');
+  }
+
+  const START_ROW = 5;
+
+  // Buscar la siguiente fila disponible en el log
+  let row = START_ROW;
+
+  while (sheet.getRange(row, 8).getValue() !== "") {
+    row++;
+  }
+
+  // Número cronológico de la entrada
+  const number = row - START_ROW + 1;
+
+  sheet.getRange(row, 8).setValue(number);     // H
+  sheet.getRange(row, 9).setValue(phase);      // I
+  sheet.getRange(row, 10).setValue(operation); // J
+}
+
+/**
+ * Limpia todas las entradas del log de micro-operaciones.
+ */
+function clearMicroOperationLog() {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("CPU");
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "CPU".');
+  }
+
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow >= 5) {
+    sheet
+      .getRange(5, 8, lastRow - 4, 3)
+      .clearContent();
   }
 }
