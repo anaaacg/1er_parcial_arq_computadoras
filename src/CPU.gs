@@ -1206,6 +1206,31 @@ Logger.log("PC = " + getRegister("PC"));
   Logger.log("AX final = " + getRegister("AX"));
   Logger.log("PC final = " + getRegister("PC"));
   Logger.log("CPU detenido = " + cpuHalted);
+  // ========================================
+  // PRUEBA RESET
+  // ========================================
+  
+  setRegister("PC", 0x40);
+  setRegister("AX", 0x15);
+  setRegister("BX", 0x08);
+  
+  setFlag("ZF", 1);
+  setFlag("CF", 1);
+  
+  cpuHalted = true;
+  currentPhase = "EXECUTE";
+  
+  resetCpu();
+  
+  Logger.log("=== DESPUÉS DE RESET ===");
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("BX = " + getRegister("BX"));
+  Logger.log("ZF = " + getFlag("ZF"));
+  Logger.log("CF = " + getFlag("CF"));
+  Logger.log("SF = " + getFlag("SF"));
+  Logger.log("Fase = " + currentPhase);
+  Logger.log("Halted = " + cpuHalted);
 }
 
 function testJumpsStepAndRun() {
@@ -1333,4 +1358,42 @@ function testPauseState() {
   resumeCpu();
 
   Logger.log("Después de continuar = " + isCpuPaused());
+}
+
+
+/**
+ * Reinicia el estado interno del CPU.
+ *
+ * No elimina el contenido de la memoria RAM.
+ */
+function resetCpu() {
+
+  // Registros
+  setRegister("PC", 0x00);
+  setRegister("IR", 0x00);
+  setRegister("MAR", 0x00);
+  setRegister("MDR", 0x00);
+  setRegister("AX", 0x00);
+  setRegister("BX", 0x00);
+
+  // Banderas
+  setFlag("ZF", 0);
+  setFlag("CF", 0);
+  setFlag("SF", 0);
+
+  // Estado de ejecución
+  cpuHalted = false;
+  cpuPaused = false;
+
+  // Ciclo de instrucción
+  currentPhase = "FETCH";
+
+  // Resultados temporales
+  decodedInstruction = null;
+  executionResult = null;
+
+  // Estado persistente de PAUSE
+  PropertiesService
+    .getScriptProperties()
+    .setProperty("CPU_PAUSED", "false");
 }
