@@ -30,6 +30,57 @@ const REGISTER_CELLS = {
   BX:  "C9"
 };
 
+/**
+ * Quita el resaltado de todos los registros.
+ */
+function clearRegisterHighlights() {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  Object.values(REGISTER_CELLS).forEach(function(cell) {
+    sheet.getRange(cell).setBackground(null);
+  });
+}
+
+
+/**
+ * Resalta los registros que participan
+ * en la operación actual del CPU.
+ *
+ * @param {string[]} registerNames Registros a resaltar.
+ */
+function highlightRegisters(registerNames) {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  clearRegisterHighlights();
+
+  registerNames.forEach(function(registerName) {
+
+    if (!(registerName in REGISTER_CELLS)) {
+      throw new Error(
+        "Registro inexistente para resaltar: " + registerName
+      );
+    }
+
+    sheet
+      .getRange(REGISTER_CELLS[registerName])
+      .setBackground("#FFF2CC");
+  });
+}
+
 const FLAG_CELLS = {
   ZF: "F4",
   CF: "F5",
