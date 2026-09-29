@@ -142,6 +142,75 @@ Esta organización permite reservar diferentes rangos de opcodes según su funci
 
 La estructura podrá ampliarse posteriormente agregando nuevas instrucciones sin modificar las categorías existentes.
 
+### 5.4. Codificación de instrucciones
+
+Para que la Unidad de Control pueda decodificar las instrucciones almacenadas en memoria, se define cómo se representan los registros, modos de direccionamiento y operandos mediante bytes de 8 bits.
+
+#### Codificación de registros
+
+| Código | Registro |
+| ------ | -------- |
+| `00h` | `AX` |
+| `01h` | `BX` |
+
+#### Modos de direccionamiento
+
+| Código | Modo | Descripción |
+| ------ | ---- | ----------- |
+| `00h` | Registro | El operando se encuentra en otro registro. |
+| `01h` | Inmediato | El operando es un valor incluido directamente en la instrucción. |
+| `02h` | Memoria | El operando corresponde a una dirección de memoria. |
+
+#### Formato de las instrucciones
+
+Las instrucciones pueden ocupar diferente cantidad de bytes dependiendo de los operandos requeridos.
+
+| Instrucciones | Formato | Bytes |
+| ------------- | ------- | ----- |
+| `MOV reg, imm/reg` | Opcode + Registro + Modo + Operando | 4 |
+| `ADD`, `SUB`, `CMP` | Opcode + Registro + Modo + Operando | 4 |
+| `INC`, `DEC` | Opcode + Registro | 2 |
+| `LOAD`, `STORE` | Opcode + Registro + Dirección | 3 |
+| `JMP`, `JZ`, `JNZ` | Opcode + Dirección | 2 |
+| `HLT` | Opcode | 1 |
+
+Por ejemplo, la instrucción:
+
+```text
+ADD AX, 05h
+```
+
+se representa en memoria como:
+
+```text
+10 00 01 05
+```
+
+donde:
+
+```text
+10 → opcode ADD
+00 → registro AX
+01 → modo inmediato
+05 → operando
+```
+
+Mientras que:
+
+```text
+ADD AX, BX
+```
+
+se representa como:
+
+```text
+10 00 00 01
+```
+
+donde `00h` indica direccionamiento por registro y `01h` identifica al registro `BX`.
+
+Esta codificación permite que la fase **Decode** interprete el opcode, identifique el modo de direccionamiento y prepare los operandos antes de pasar a **Execute**.
+
 ## 6. Preparación para futuras extensiones
 
 La arquitectura modular del simulador permite incorporar nuevos componentes sin modificar completamente los módulos existentes.
