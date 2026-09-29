@@ -1003,6 +1003,7 @@ function stepCpu(loadState = true) {
   if (loadState) {
     loadExecutionState();
     updatePhaseDisplay(currentPhase);
+    
   }
 
   if (cpuHalted) {
@@ -1067,25 +1068,51 @@ function runCpu() {
   resumeCpu();
 
   while (
-    !cpuHalted &&
-    !isCpuPaused() &&
-    steps < MAX_STEPS
-  ) {
+  !cpuHalted &&
+  !isCpuPaused() &&
+  steps < MAX_STEPS
+) {
 
-    // Ya cargamos el estado arriba.
-    // No volver a cargarlo en cada fase.
-    stepCpu(false);
+  // Mostrar la fase que está por ejecutarse
+  updatePhaseDisplay(currentPhase);
 
-    steps++;
+  // Mostrar los registros correspondientes a esa fase
+  switch (currentPhase) {
 
-    if (
-      !cpuHalted &&
-      !isCpuPaused() &&
-      runDelay > 0
-    ) {
-      Utilities.sleep(runDelay);
-    }
+    case "FETCH":
+      highlightRegisters(["PC", "MAR", "MDR", "IR"]);
+      break;
+
+    case "DECODE":
+      highlightRegisters(["IR"]);
+      break;
+
+    case "EXECUTE":
+      highlightRegisters(
+        getActiveRegistersForExecution()
+      );
+      break;
+
+    case "STORE":
+      highlightRegisters(
+        getActiveRegistersForStore()
+      );
+      break;
   }
+
+  // Forzar que Google Sheets muestre los cambios
+  SpreadsheetApp.flush();
+
+  // Mantener la fase visible antes de ejecutarla
+  if (runDelay > 0) {
+    Utilities.sleep(runDelay);
+  }
+
+  // Ejecutar una fase
+  stepCpu(false);
+
+  steps++;
+}
 
   // Guardar el punto exacto donde terminó o fue pausado.
   saveExecutionState();
