@@ -62,11 +62,42 @@ function setRegister(registerName, value) {
  * @return {number} Valor almacenado en el registro.
  */
 function getRegister(registerName) {
+
   if (!(registerName in Registers)) {
     throw new Error("Registro inexistente: " + registerName);
   }
 
-  return Registers[registerName];
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  const value = sheet
+    .getRange(REGISTER_CELLS[registerName])
+    .getValue();
+
+  if (value === "" || value === null) {
+    return 0;
+  }
+
+  const parsedValue = parseInt(String(value), 16);
+
+  if (isNaN(parsedValue)) {
+    throw new Error(
+      "Valor inválido en el registro " +
+      registerName +
+      ": " +
+      value
+    );
+  }
+
+  // Sincronizar también el objeto interno
+  Registers[registerName] = parsedValue;
+
+  return parsedValue;
 }
 
 function testRegisters() {
@@ -107,11 +138,37 @@ function setFlag(flagName, value) {
  * Obtiene el valor actual de una bandera.
  */
 function getFlag(flagName) {
+
   if (!(flagName in Flags)) {
     throw new Error("Bandera inexistente: " + flagName);
   }
 
-  return Flags[flagName];
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CPU_SHEET);
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "' + CPU_SHEET + '".');
+  }
+
+  const value = Number(
+    sheet
+      .getRange(FLAG_CELLS[flagName])
+      .getValue()
+  );
+
+  if (value !== 0 && value !== 1) {
+    throw new Error(
+      "Valor inválido en la bandera " +
+      flagName +
+      ": " +
+      value
+    );
+  }
+
+  Flags[flagName] = value;
+
+  return value;
 }
 
 function testFlags() {
@@ -189,6 +246,7 @@ function testFlagUpdates() {
  * Actualiza visualmente un registro en la hoja CPU.
  */
 function updateRegisterDisplay(registerName) {
+
   const sheet = SpreadsheetApp
     .getActiveSpreadsheet()
     .getSheetByName(CPU_SHEET);
@@ -197,7 +255,9 @@ function updateRegisterDisplay(registerName) {
     throw new Error('No existe la hoja "' + CPU_SHEET + '".');
   }
 
-  const value = getRegister(registerName);
+  // Usar directamente el valor interno que setRegister()
+  // acaba de modificar.
+  const value = Registers[registerName];
 
   const hexadecimal = value
     .toString(16)
@@ -209,11 +269,11 @@ function updateRegisterDisplay(registerName) {
     .setValue(hexadecimal);
 }
 
-
 /**
  * Actualiza visualmente una bandera en la hoja CPU.
  */
 function updateFlagDisplay(flagName) {
+
   const sheet = SpreadsheetApp
     .getActiveSpreadsheet()
     .getSheetByName(CPU_SHEET);
@@ -222,9 +282,11 @@ function updateFlagDisplay(flagName) {
     throw new Error('No existe la hoja "' + CPU_SHEET + '".');
   }
 
+  // Usar directamente el valor que setFlag()
+  // acaba de modificar.
   sheet
     .getRange(FLAG_CELLS[flagName])
-    .setValue(getFlag(flagName));
+    .setValue(Flags[flagName]);
 }
 
 function testCPUDisplay() {
