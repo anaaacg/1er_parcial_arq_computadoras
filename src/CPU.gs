@@ -42,6 +42,7 @@ let executionResult = null;
 let cpuHalted = false;
 let cpuPaused = false;
 let currentPhase = "FETCH";
+let runDelay = 500;
 
 // ============================================
 // FETCH
@@ -1024,27 +1025,38 @@ function stepCpu() {
 
 /**
  * Modo RUN
- * Ejecuta instrucciones continuamente
- * hasta encontrar HLT.
+ *
+ * Ejecuta automáticamente el CPU
+ * fase por fase hasta HLT o PAUSE.
  */
 function runCpu() {
 
-  const MAX_CYCLES = 1000;
+  const MAX_STEPS = 4000;
 
-  let cycles = 0;
+  let steps = 0;
 
   cpuPaused = false;
 
-  while (!cpuHalted && !cpuPaused && cycles < MAX_CYCLES) {
+  while (
+    !cpuHalted &&
+    !cpuPaused &&
+    steps < MAX_STEPS
+  ) {
 
-    instructionCycle();
+    // Ejecutar UNA fase
+    stepCpu();
 
-    cycles++;
+    steps++;
+
+    // Delay entre fases
+    if (!cpuHalted && !cpuPaused && runDelay > 0) {
+      Utilities.sleep(runDelay);
+    }
   }
 
-  if (cycles >= MAX_CYCLES) {
+  if (steps >= MAX_STEPS) {
     throw new Error(
-      "Ejecución detenida: se alcanzó el límite máximo de ciclos."
+      "Ejecución detenida: se alcanzó el límite máximo de pasos."
     );
   }
 }
@@ -1151,6 +1163,8 @@ Logger.log("PC = " + getRegister("PC"));
   setRegister("PC", 0x00);
 
   Logger.log("=== RUN ===");
+
+  setRunDelay(100);
 
   runCpu();
 
@@ -1262,4 +1276,18 @@ function testJumpsStepAndRun() {
   Logger.log("PC final = " + getRegister("PC"));
   Logger.log("ZF final = " + getFlag("ZF"));
   Logger.log("CPU detenido = " + cpuHalted);
+}
+
+/**
+ * Configura el delay del modo RUN.
+ *
+ * @param {number} milliseconds Tiempo entre fases.
+ */
+function setRunDelay(milliseconds) {
+
+  if (milliseconds < 0) {
+    throw new Error("El delay no puede ser negativo");
+  }
+
+  runDelay = milliseconds;
 }
