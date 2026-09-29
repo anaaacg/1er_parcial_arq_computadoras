@@ -40,6 +40,7 @@ const ADDRESSING_MODES = {
 let decodedInstruction = null;
 let executionResult = null;
 let cpuHalted = false;
+let cpuPaused = false;
 
 
 // ============================================
@@ -974,4 +975,129 @@ function testHalt() {
   Logger.log("CPU detenido = " + cpuHalted);
   Logger.log("PC = " + getRegister("PC"));
   Logger.log("AX = " + getRegister("AX"));
+}
+
+/**
+ * Modo STEP
+ * Ejecuta una sola instrucción completa.
+ */
+function stepCpu() {
+
+  if (cpuHalted) {
+    return;
+  }
+
+  instructionCycle();
+}
+
+/**
+ * Modo RUN
+ * Ejecuta instrucciones continuamente
+ * hasta encontrar HLT.
+ */
+function runCpu() {
+
+  const MAX_CYCLES = 1000;
+
+  let cycles = 0;
+
+  cpuPaused = false;
+
+  while (!cpuHalted && !cpuPaused && cycles < MAX_CYCLES) {
+
+    instructionCycle();
+
+    cycles++;
+  }
+
+  if (cycles >= MAX_CYCLES) {
+    throw new Error(
+      "Ejecución detenida: se alcanzó el límite máximo de ciclos."
+    );
+  }
+}
+
+/**
+ * Pausa la ejecución del CPU.
+ */
+function pauseCpu() {
+  cpuPaused = true;
+}
+
+function testStepAndRun() {
+
+  // ========================================
+  // PROGRAMA
+  //
+  // MOV AX, 05h
+  // INC AX
+  // INC AX
+  // HLT
+  // ========================================
+
+  // MOV AX, 05h
+  // 00h - 03h
+  Write(0x00, 0x01);
+  Write(0x01, 0x00);
+  Write(0x02, 0x01);
+  Write(0x03, 0x05);
+
+  // INC AX
+  // 04h - 05h
+  Write(0x04, 0x12);
+  Write(0x05, 0x00);
+
+  // INC AX
+  // 06h - 07h
+  Write(0x06, 0x12);
+  Write(0x07, 0x00);
+
+  // HLT
+  // 08h
+  Write(0x08, 0xFF);
+
+
+  // ========================================
+  // PRUEBA STEP
+  // ========================================
+
+  resetCpuHalt();
+  cpuPaused = false;
+
+  setRegister("AX", 0x00);
+  setRegister("PC", 0x00);
+
+  Logger.log("=== STEP ===");
+
+  stepCpu();
+
+  Logger.log("Después STEP 1:");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("PC = " + getRegister("PC"));
+
+  stepCpu();
+
+  Logger.log("Después STEP 2:");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("PC = " + getRegister("PC"));
+
+
+  // ========================================
+  // PRUEBA RUN
+  // Reiniciamos para ejecutar todo
+  // ========================================
+
+  resetCpuHalt();
+  cpuPaused = false;
+
+  setRegister("AX", 0x00);
+  setRegister("PC", 0x00);
+
+  Logger.log("=== RUN ===");
+
+  runCpu();
+
+  Logger.log("AX final = " + getRegister("AX"));
+  Logger.log("PC final = " + getRegister("PC"));
+  Logger.log("CPU detenido = " + cpuHalted);
 }
