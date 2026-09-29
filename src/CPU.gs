@@ -1009,31 +1009,39 @@ function stepCpu(loadState = true) {
 
   switch (currentPhase) {
 
-    case "FETCH":
-      fetch();
-      currentPhase = "DECODE";
-      break;
+  case "FETCH":
+    highlightRegisters(["PC", "MAR", "MDR", "IR"]);
+    fetch();
+    currentPhase = "DECODE";
+    break;
 
-    case "DECODE":
-      decode();
-      currentPhase = "EXECUTE";
-      break;
+  case "DECODE":
+    highlightRegisters(["IR"]);
+    decode();
+    currentPhase = "EXECUTE";
+    break;
 
-    case "EXECUTE":
-      execute();
-      currentPhase = "STORE";
-      break;
+  case "EXECUTE":
+    highlightRegisters(
+      getActiveRegistersForExecution()
+    );
+    execute();
+    currentPhase = "STORE";
+    break;
 
-    case "STORE":
-      store();
-      currentPhase = "FETCH";
-      break;
+  case "STORE":
+    highlightRegisters(
+      getActiveRegistersForStore()
+    );
+    store();
+    currentPhase = "FETCH";
+    break;
 
-    default:
-      throw new Error(
-        "Fase desconocida del CPU: " + currentPhase
-      );
-  }
+  default:
+    throw new Error(
+      "Fase desconocida del CPU: " + currentPhase
+    );
+}
 
   saveExecutionState();
 }
@@ -1407,6 +1415,8 @@ function resetCpu() {
   // Ciclo de instrucción
   currentPhase = "FETCH";
   updatePhaseDisplay("FETCH");
+
+  clearRegisterHighlights();  
 
   // Resultados temporales
   decodedInstruction = null;
@@ -1797,6 +1807,7 @@ function loadExecutionState() {
       ? Number(result)
       : null;
 }
+
 function updatePhaseDisplay(phase) {
 
   const sheet = SpreadsheetApp
@@ -1808,4 +1819,78 @@ function updatePhaseDisplay(phase) {
   }
 
   sheet.getRange("F8").setValue(phase);
+}
+
+function getActiveRegistersForExecution() {
+
+  if (!decodedInstruction) {
+    return [];
+  }
+
+  const instruction = decodedInstruction;
+  const registers = [];
+
+  // Registro principal de la instrucción
+  if (instruction.register) {
+    registers.push(instruction.register);
+  }
+
+  // Segundo registro cuando el operando es REGISTER
+  if (
+    instruction.mode === "REGISTER" &&
+    instruction.operand !== undefined
+  ) {
+    const secondRegister =
+      instruction.operand === 0 ? "AX" : "BX";
+
+    if (!registers.includes(secondRegister)) {
+      registers.push(secondRegister);
+    }
+  }
+
+  // LOAD utiliza MAR y MDR para acceder a memoria
+  if (instruction.mnemonic === "LOAD") {
+    registers.push("MAR", "MDR");
+  }
+
+  // STORE utiliza el registro origen, MAR y MDR
+  if (instruction.mnemonic === "STORE") {
+    registers.push("MAR", "MDR");
+  }
+
+  return registers;
+}
+function getActiveRegistersForStore() {
+
+  if (!decodedInstruction) {
+    return [];
+  }
+
+  const instruction = decodedInstruction;
+
+  switch (instruction.mnemonic) {
+
+    case "MOV":
+    case "ADD":
+    case "SUB":
+    case "INC":
+    case "DEC":
+    case "LOAD":
+      return instruction.register
+        ? [instruction.register]
+        : [];
+
+    case "STORE":
+      return ["MAR", "MDR"];
+
+    case "CMP":
+    case "JMP":
+    case "JZ":
+    case "JNZ":
+    case "HLT":
+      return [];
+
+    default:
+      return [];
+  }
 }
