@@ -41,7 +41,7 @@ let decodedInstruction = null;
 let executionResult = null;
 let cpuHalted = false;
 let cpuPaused = false;
-
+let currentPhase = "FETCH";
 
 // ============================================
 // FETCH
@@ -943,6 +943,8 @@ function testControlFlow() {
 
 function resetCpuHalt() {
   cpuHalted = false;
+  cpuPaused = false;
+  currentPhase = "FETCH";
 }
 
 function testHalt() {
@@ -979,7 +981,11 @@ function testHalt() {
 
 /**
  * Modo STEP
- * Ejecuta una sola instrucción completa.
+ *
+ * Ejecuta una sola fase del ciclo del CPU
+ * por cada llamada.
+ *
+ * FETCH → DECODE → EXECUTE → STORE → FETCH
  */
 function stepCpu() {
 
@@ -987,7 +993,33 @@ function stepCpu() {
     return;
   }
 
-  instructionCycle();
+  switch (currentPhase) {
+
+    case "FETCH":
+      fetch();
+      currentPhase = "DECODE";
+      break;
+
+    case "DECODE":
+      decode();
+      currentPhase = "EXECUTE";
+      break;
+
+    case "EXECUTE":
+      execute();
+      currentPhase = "STORE";
+      break;
+
+    case "STORE":
+      store();
+      currentPhase = "FETCH";
+      break;
+
+    default:
+      throw new Error(
+        "Fase desconocida del CPU: " + currentPhase
+      );
+  }
 }
 
 /**
@@ -1058,29 +1090,54 @@ function testStepAndRun() {
 
 
   // ========================================
-  // PRUEBA STEP
-  // ========================================
+// PRUEBA STEP POR FASE
+// ========================================
 
-  resetCpuHalt();
-  cpuPaused = false;
+resetCpuHalt();
 
-  setRegister("AX", 0x00);
-  setRegister("PC", 0x00);
+setRegister("AX", 0x00);
+setRegister("PC", 0x00);
 
-  Logger.log("=== STEP ===");
+Logger.log("=== STEP POR FASE ===");
 
-  stepCpu();
 
-  Logger.log("Después STEP 1:");
-  Logger.log("AX = " + getRegister("AX"));
-  Logger.log("PC = " + getRegister("PC"));
+// STEP 1 → FETCH
+stepCpu();
 
-  stepCpu();
+Logger.log("Después STEP 1:");
+Logger.log("Fase siguiente = " + currentPhase);
+Logger.log("IR = " + getRegister("IR"));
+Logger.log("PC = " + getRegister("PC"));
+Logger.log("AX = " + getRegister("AX"));
 
-  Logger.log("Después STEP 2:");
-  Logger.log("AX = " + getRegister("AX"));
-  Logger.log("PC = " + getRegister("PC"));
 
+// STEP 2 → DECODE
+stepCpu();
+
+Logger.log("Después STEP 2:");
+Logger.log("Fase siguiente = " + currentPhase);
+Logger.log(
+  "Instrucción = " + decodedInstruction.mnemonic
+);
+Logger.log("AX = " + getRegister("AX"));
+
+
+// STEP 3 → EXECUTE
+stepCpu();
+
+Logger.log("Después STEP 3:");
+Logger.log("Fase siguiente = " + currentPhase);
+Logger.log("Resultado = " + executionResult);
+Logger.log("AX = " + getRegister("AX"));
+
+
+// STEP 4 → STORE
+stepCpu();
+
+Logger.log("Después STEP 4:");
+Logger.log("Fase siguiente = " + currentPhase);
+Logger.log("AX = " + getRegister("AX"));
+Logger.log("PC = " + getRegister("PC"));
 
   // ========================================
   // PRUEBA RUN
@@ -1101,7 +1158,6 @@ function testStepAndRun() {
   Logger.log("PC final = " + getRegister("PC"));
   Logger.log("CPU detenido = " + cpuHalted);
 }
-
 
 function testJumpsStepAndRun() {
 
