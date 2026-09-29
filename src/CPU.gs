@@ -1036,6 +1036,7 @@ function stepCpu() {
  * fase por fase hasta HLT o PAUSE.
  */
 function runCpu() {
+
   updateRunDelayFromInterface();
 
   const MAX_STEPS = 4000;
@@ -1207,22 +1208,23 @@ Logger.log("PC = " + getRegister("PC"));
   Logger.log("AX final = " + getRegister("AX"));
   Logger.log("PC final = " + getRegister("PC"));
   Logger.log("CPU detenido = " + cpuHalted);
-  // ========================================
+
+    // ========================================
   // PRUEBA RESET
   // ========================================
-  
+
   setRegister("PC", 0x40);
   setRegister("AX", 0x15);
   setRegister("BX", 0x08);
-  
+
   setFlag("ZF", 1);
   setFlag("CF", 1);
-  
+
   cpuHalted = true;
   currentPhase = "EXECUTE";
-  
+
   resetCpu();
-  
+
   Logger.log("=== DESPUÉS DE RESET ===");
   Logger.log("PC = " + getRegister("PC"));
   Logger.log("AX = " + getRegister("AX"));
@@ -1361,7 +1363,6 @@ function testPauseState() {
   Logger.log("Después de continuar = " + isCpuPaused());
 }
 
-
 /**
  * Reinicia el estado interno del CPU.
  *
@@ -1452,7 +1453,6 @@ function loadProgram(program, startAddress) {
   setRegister("PC", startAddress);
 }
 
-
 /**
  * Obtiene el delay de RUN según la velocidad
  * seleccionada en la interfaz.
@@ -1484,4 +1484,254 @@ function updateRunDelayFromInterface() {
     default:
       setRunDelay(500);
   }
+}
+
+/**
+ * Convierte un registro a su código interno.
+ */
+function registerCode(register) {
+
+  switch (register.toUpperCase()) {
+    case "AX":
+      return 0x00;
+
+    case "BX":
+      return 0x01;
+
+    default:
+      throw new Error("Registro no válido: " + register);
+  }
+}
+
+
+/**
+ * Convierte un valor hexadecimal terminado en h
+ * o un valor decimal a número.
+ *
+ * Ejemplos:
+ * 05h -> 5
+ * 80h -> 128
+ * 10  -> 10
+ */
+function parseValue(value) {
+
+  value = value.trim();
+
+  if (/^[0-9A-F]+H$/i.test(value)) {
+    return parseInt(value.slice(0, -1), 16);
+  }
+
+  if (/^\d+$/.test(value)) {
+    return parseInt(value, 10);
+  }
+
+  throw new Error("Valor no válido: " + value);
+}
+
+
+/**
+ * Ensambla una instrucción de texto
+ * utilizando la ISA del simulador.
+ */
+function assembleInstruction(line) {
+
+  line = line.trim().toUpperCase();
+
+  if (line === "") {
+    return [];
+  }
+
+  // HLT
+  if (line === "HLT") {
+    return [0xFF];
+  }
+
+  // INC reg
+  let match = line.match(/^INC\s+(AX|BX)$/);
+
+  if (match) {
+    return [
+      0x12,
+      registerCode(match[1])
+    ];
+  }
+
+  // DEC reg
+  match = line.match(/^DEC\s+(AX|BX)$/);
+
+  if (match) {
+    return [
+      0x13,
+      registerCode(match[1])
+    ];
+  }
+
+  // JMP / JZ / JNZ
+  match = line.match(/^(JMP|JZ|JNZ)\s+([0-9A-F]+H|\d+)$/);
+
+  if (match) {
+
+    const opcodes = {
+      JMP: 0x20,
+      JZ:  0x21,
+      JNZ: 0x22
+    };
+
+    return [
+      opcodes[match[1]],
+      parseValue(match[2])
+    ];
+  }
+
+  // LOAD reg, [dir]
+  match = line.match(
+    /^LOAD\s+(AX|BX)\s*,\s*\[([0-9A-F]+H|\d+)\]$/
+  );
+
+  if (match) {
+    return [
+      0x03,
+      registerCode(match[1]),
+      parseValue(match[2])
+    ];
+  }
+
+  // STORE [dir], reg
+  match = line.match(
+    /^STORE\s+\[([0-9A-F]+H|\d+)\]\s*,\s*(AX|BX)$/
+  );
+
+  if (match) {
+    return [
+      0x04,
+      parseValue(match[1]),
+      registerCode(match[2])
+    ];
+  }
+
+  // MOV reg, reg
+  match = line.match(
+    /^MOV\s+(AX|BX)\s*,\s*(AX|BX)$/
+  );
+
+  if (match) {
+    return [
+      0x02,
+      registerCode(match[1]),
+      registerCode(match[2])
+    ];
+  }
+
+  // MOV reg, imm
+  match = line.match(
+    /^MOV\s+(AX|BX)\s*,\s*([0-9A-F]+H|\d+)$/
+  );
+
+  if (match) {
+    return [
+      0x01,
+      registerCode(match[1]),
+      0x01,
+      parseValue(match[2])
+    ];
+  }
+    // ADD / SUB / CMP reg, reg
+  match = line.match(
+    /^(ADD|SUB|CMP)\s+(AX|BX)\s*,\s*(AX|BX)$/
+  );
+
+  if (match) {
+
+    const opcodes = {
+      ADD: 0x10,
+      SUB: 0x11,
+      CMP: 0x14
+    };
+
+    return [
+      opcodes[match[1]],
+      registerCode(match[2]),
+      0x00, // REGISTER
+      registerCode(match[3])
+    ];
+  }
+
+
+  // ADD / SUB / CMP reg, imm
+  match = line.match(
+    /^(ADD|SUB|CMP)\s+(AX|BX)\s*,\s*([0-9A-F]+H|\d+)$/
+  );
+
+  if (match) {
+
+    const opcodes = {
+      ADD: 0x10,
+      SUB: 0x11,
+      CMP: 0x14
+    };
+
+    return [
+      opcodes[match[1]],
+      registerCode(match[2]),
+      0x01, // IMMEDIATE
+      parseValue(match[3])
+    ];
+  }
+
+  throw new Error(
+    "Instrucción no reconocida: " + line
+  );
+}
+
+/**
+ * Lee el programa escrito en la interfaz,
+ * lo ensambla y lo carga en memoria RAM.
+ */
+function loadProgramFromInterface() {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("CPU");
+
+  const lines = sheet
+    .getRange("B21:B30")
+    .getValues()
+    .flat();
+
+  const program = [];
+
+  for (let i = 0; i < lines.length; i++) {
+
+    const line = String(lines[i]).trim();
+
+    // Ignorar filas vacías
+    if (line === "") {
+      continue;
+    }
+
+    try {
+
+      const bytes = assembleInstruction(line);
+
+      for (let j = 0; j < bytes.length; j++) {
+        program.push(bytes[j]);
+      }
+
+    } catch (error) {
+
+      throw new Error(
+        "Error en la línea " +
+        (i + 21) +
+        ": " +
+        error.message
+      );
+    }
+  }
+
+  if (program.length === 0) {
+    throw new Error("No hay ningún programa para cargar.");
+  }
+
+  // Cargar desde 00h
+  loadProgram(program, 0x00);
 }
