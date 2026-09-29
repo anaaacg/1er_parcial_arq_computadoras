@@ -994,7 +994,13 @@ function testHalt() {
  *
  * FETCH → DECODE → EXECUTE → STORE → FETCH
  */
-function stepCpu() {
+function stepCpu(loadState = true) {
+
+  // Solo recuperar estado cuando STEP se ejecuta
+  // directamente desde la interfaz.
+  if (loadState) {
+    loadExecutionState();
+  }
 
   if (cpuHalted) {
     return;
@@ -1027,6 +1033,8 @@ function stepCpu() {
         "Fase desconocida del CPU: " + currentPhase
       );
   }
+
+  saveExecutionState();
 }
 
 /**
@@ -1039,6 +1047,9 @@ function runCpu() {
 
   updateRunDelayFromInterface();
 
+  // Recuperar exactamente el punto donde quedó el CPU.
+  loadExecutionState();
+
   const MAX_STEPS = 4000;
   let steps = 0;
 
@@ -1050,7 +1061,9 @@ function runCpu() {
     steps < MAX_STEPS
   ) {
 
-    stepCpu();
+    // Ya cargamos el estado arriba.
+    // No volver a cargarlo en cada fase.
+    stepCpu(false);
 
     steps++;
 
@@ -1062,6 +1075,9 @@ function runCpu() {
       Utilities.sleep(runDelay);
     }
   }
+
+  // Guardar el punto exacto donde terminó o fue pausado.
+  saveExecutionState();
 
   if (steps >= MAX_STEPS) {
     throw new Error(
@@ -1393,6 +1409,7 @@ function resetCpu() {
   // Resultados temporales
   decodedInstruction = null;
   executionResult = null;
+  saveExecutionState();
 
   // Estado persistente de PAUSE
   PropertiesService
@@ -1734,4 +1751,47 @@ function loadProgramFromInterface() {
 
   // Cargar desde 00h
   loadProgram(program, 0x00);
+}
+
+function saveExecutionState() {
+
+  const properties = PropertiesService.getScriptProperties();
+
+  properties.setProperty("CPU_PHASE", currentPhase);
+
+  properties.setProperty(
+    "CPU_DECODED_INSTRUCTION",
+    decodedInstruction === null
+      ? ""
+      : JSON.stringify(decodedInstruction)
+  );
+
+  properties.setProperty(
+    "CPU_EXECUTION_RESULT",
+    executionResult === null
+      ? ""
+      : String(executionResult)
+  );
+}
+
+
+function loadExecutionState() {
+
+  const properties = PropertiesService.getScriptProperties();
+
+  const phase = properties.getProperty("CPU_PHASE");
+  const instruction = properties.getProperty("CPU_DECODED_INSTRUCTION");
+  const result = properties.getProperty("CPU_EXECUTION_RESULT");
+
+  currentPhase = phase || "FETCH";
+
+  decodedInstruction =
+    instruction
+      ? JSON.parse(instruction)
+      : null;
+
+  executionResult =
+    result !== null && result !== ""
+      ? Number(result)
+      : null;
 }
