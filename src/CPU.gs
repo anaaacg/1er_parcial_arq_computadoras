@@ -453,9 +453,122 @@ function testExecuteComplete() {
 // STORE
 // ============================================
 
+/**
+ * Fase STORE / WRITE-BACK
+ *
+ * Guarda el resultado generado durante Execute
+ * en el registro o memoria correspondiente.
+ */
 function store() {
 
+  if (!decodedInstruction) {
+    throw new Error("No existe una instrucción decodificada");
+  }
+
+  const instruction = decodedInstruction;
+
+  switch (instruction.mnemonic) {
+
+    // Guardan el resultado en el registro destino
+    case "MOV":
+    case "ADD":
+    case "SUB":
+    case "INC":
+    case "DEC":
+    case "LOAD":
+
+      if (executionResult !== null) {
+        setRegister(
+          instruction.register,
+          toByte(executionResult)
+        );
+      }
+
+      break;
+
+
+    // Guarda el contenido preparado en memoria
+    case "STORE":
+
+      // Dirección destino → MAR
+      setRegister("MAR", instruction.address);
+
+      // Dato → MDR
+      setRegister("MDR", toByte(executionResult));
+
+      // MDR → RAM[MAR]
+      Write(
+        getRegister("MAR"),
+        getRegister("MDR")
+      );
+
+      break;
+
+
+    // Estas instrucciones no necesitan Write-back
+    case "CMP":
+    case "JMP":
+    case "JZ":
+    case "JNZ":
+    case "HLT":
+      break;
+
+
+    default:
+      throw new Error(
+        "Store no implementado para: " +
+        instruction.mnemonic
+      );
+  }
 }
+
+function testStore() {
+
+  // ========================================
+  // ADD AX, 05h
+  // ========================================
+
+  Write(0x00, 0x10);
+  Write(0x01, 0x00);
+  Write(0x02, 0x01);
+  Write(0x03, 0x05);
+
+  setRegister("AX", 0x03);
+  setRegister("PC", 0x00);
+
+  fetch();
+  decode();
+  execute();
+
+  Logger.log("--- ANTES DE STORE ---");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("Resultado = " + executionResult);
+
+  store();
+
+  Logger.log("--- DESPUÉS DE STORE ---");
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // STORE [80h], AX
+  // ========================================
+
+  decodedInstruction = {
+    mnemonic: "STORE",
+    register: "AX",
+    address: 0x80
+  };
+
+  execute();
+  store();
+
+  Logger.log("--- STORE [80h], AX ---");
+  Logger.log("MAR = " + getRegister("MAR"));
+  Logger.log("MDR = " + getRegister("MDR"));
+  Logger.log("RAM[80h] = " + Read(0x80));
+}
+
 
 
 // ============================================
