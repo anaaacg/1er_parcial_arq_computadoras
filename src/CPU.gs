@@ -943,10 +943,16 @@ function testControlFlow() {
 }
 
 function resetCpuHalt() {
+
   cpuHalted = false;
   cpuPaused = false;
   currentPhase = "FETCH";
+
+  PropertiesService
+    .getScriptProperties()
+    .setProperty("CPU_PAUSED", "false");
 }
+
 
 function testHalt() {
 
@@ -1032,24 +1038,25 @@ function stepCpu() {
 function runCpu() {
 
   const MAX_STEPS = 4000;
-
   let steps = 0;
 
-  cpuPaused = false;
+  resumeCpu();
 
   while (
     !cpuHalted &&
-    !cpuPaused &&
+    !isCpuPaused() &&
     steps < MAX_STEPS
   ) {
 
-    // Ejecutar UNA fase
     stepCpu();
 
     steps++;
 
-    // Delay entre fases
-    if (!cpuHalted && !cpuPaused && runDelay > 0) {
+    if (
+      !cpuHalted &&
+      !isCpuPaused() &&
+      runDelay > 0
+    ) {
       Utilities.sleep(runDelay);
     }
   }
@@ -1062,10 +1069,38 @@ function runCpu() {
 }
 
 /**
- * Pausa la ejecución del CPU.
+ * Pausa la ejecución automática del CPU.
  */
 function pauseCpu() {
   cpuPaused = true;
+
+  PropertiesService
+    .getScriptProperties()
+    .setProperty("CPU_PAUSED", "true");
+}
+
+/**
+ * Indica si el CPU tiene solicitada una pausa.
+ */
+function isCpuPaused() {
+
+  const value = PropertiesService
+    .getScriptProperties()
+    .getProperty("CPU_PAUSED");
+
+  return value === "true";
+}
+
+/**
+ * Quita el estado de pausa del CPU.
+ */
+function resumeCpu() {
+
+  cpuPaused = false;
+
+  PropertiesService
+    .getScriptProperties()
+    .setProperty("CPU_PAUSED", "false");
 }
 
 function testStepAndRun() {
@@ -1290,4 +1325,12 @@ function setRunDelay(milliseconds) {
   }
 
   runDelay = milliseconds;
+}
+
+function testPauseState() {
+  Logger.log("Pausado = " + isCpuPaused());
+
+  resumeCpu();
+
+  Logger.log("Después de continuar = " + isCpuPaused());
 }
