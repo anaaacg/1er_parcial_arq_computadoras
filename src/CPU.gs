@@ -1397,3 +1397,56 @@ function resetCpu() {
     .getScriptProperties()
     .setProperty("CPU_PAUSED", "false");
 }
+
+/**
+ * Carga un programa completo en la memoria RAM.
+ *
+ * @param {number[]} program Arreglo de bytes del programa.
+ * @param {number} startAddress Dirección inicial de carga.
+ */
+function loadProgram(program, startAddress) {
+
+  // Si no se indica dirección, comenzar en 00h
+  if (startAddress === undefined) {
+    startAddress = 0x00;
+  }
+
+  if (!Array.isArray(program)) {
+    throw new Error("El programa debe ser un arreglo de bytes");
+  }
+
+  if (
+    startAddress < 0 ||
+    startAddress > 0xFF
+  ) {
+    throw new Error("Dirección inicial fuera de rango");
+  }
+
+  if (startAddress + program.length > 256) {
+    throw new Error("El programa excede la memoria RAM");
+  }
+
+  // Cargar cada byte en RAM
+  for (let i = 0; i < program.length; i++) {
+
+    const byte = program[i];
+
+    if (
+      !Number.isInteger(byte) ||
+      byte < 0 ||
+      byte > 0xFF
+    ) {
+      throw new Error(
+        "Byte inválido en la posición " + i
+      );
+    }
+
+    Write(startAddress + i, byte);
+  }
+
+  // Preparar CPU para ejecutar el programa
+  resetCpu();
+
+  // El PC debe comenzar donde fue cargado
+  setRegister("PC", startAddress);
+}
