@@ -44,6 +44,13 @@ let cpuPaused = false;
 let currentPhase = "FETCH";
 let runDelay = 500;
 
+function toHex(value) {
+  return value
+    .toString(16)
+    .toUpperCase()
+    .padStart(2, "0") + "h";
+}
+
 // ============================================
 // FETCH
 // ============================================
@@ -59,6 +66,8 @@ function fetch() {
   setRegister("IR", getRegister("MDR"));
 
   setRegister("PC", toByte(pc + 1));
+
+  
 }
 
 
@@ -145,14 +154,26 @@ function decode() {
     // LOAD reg,[dir] / STORE [dir],reg
     case "MEMORY":
 
-      decodedInstruction.register = REGISTER_CODES[Read(pc)];
-      pc = toByte(pc + 1);
+      if (instruction.mnemonic === "STORE") {
 
-      decodedInstruction.address = Read(pc);
-      pc = toByte(pc + 1);
+        // STORE [dir], reg
+        decodedInstruction.address = Read(pc);
+        pc = toByte(pc + 1);
+
+        decodedInstruction.register = REGISTER_CODES[Read(pc)];
+        pc = toByte(pc + 1);
+
+      } else {
+
+        // LOAD reg, [dir]
+        decodedInstruction.register = REGISTER_CODES[Read(pc)];
+        pc = toByte(pc + 1);
+
+        decodedInstruction.address = Read(pc);
+        pc = toByte(pc + 1);
+      }
 
       break;
-
 
     // JMP / JZ / JNZ
     case "JUMP":
@@ -170,7 +191,7 @@ function decode() {
 
   // PC queda apuntando al opcode de la próxima instrucción
   setRegister("PC", pc);
-
+  
   return decodedInstruction;
 }
 
@@ -290,6 +311,8 @@ function execute() {
       // Prepara el valor que posteriormente Store
       // escribirá en el registro destino.
       executionResult = resolveOperand(instruction);
+
+
       break;
 
     case "LOAD":
@@ -998,8 +1021,6 @@ function testHalt() {
  */
 function stepCpu(loadState = true) {
 
-  // Recuperar estado cuando STEP se ejecuta
-  // directamente desde la interfaz.
   if (loadState) {
     loadExecutionState();
   }
@@ -1008,51 +1029,245 @@ function stepCpu(loadState = true) {
     return;
   }
 
-  // Mostrar la fase que se va a ejecutar
   updatePhaseDisplay(currentPhase);
-
-  // Registrar una sola entrada por fase
-  addMicroOperationLog(
-    currentPhase,
-    "Fase " + currentPhase + " ejecutada"
-  );
-
 
   switch (currentPhase) {
 
-  case "FETCH":
-    highlightRegisters(["PC", "MAR", "MDR", "IR"]);
-    fetch();
-    currentPhase = "DECODE";
-    break;
+    case "FETCH":
 
-  case "DECODE":
-    highlightRegisters(["IR"]);
-    decode();
-    currentPhase = "EXECUTE";
-    break;
+      highlightRegisters(["PC", "MAR", "MDR", "IR"]);
 
-  case "EXECUTE":
-    highlightRegisters(
-      getActiveRegistersForExecution()
-    );
-    execute();
-    currentPhase = "STORE";
-    break;
+      fetch();
 
-  case "STORE":
-    highlightRegisters(
-      getActiveRegistersForStore()
-    );
-    store();
-    currentPhase = "FETCH";
-    break;
+      addMicroOperationLog(
+        "FETCH",
+        "MAR=" + toHex(getRegister("MAR")) +
+        ", MDR=" + toHex(getRegister("MDR")) +
+        " → IR=" + toHex(getRegister("IR")) +
+        ", PC=" + toHex(getRegister("PC"))
+      );
 
-  default:
-    throw new Error(
-      "Fase desconocida del CPU: " + currentPhase
-    );
-}
+      currentPhase = "DECODE";
+      break;
+
+
+    case "DECODE":
+
+      highlightRegisters(["IR"]);
+
+      decode();
+
+      addMicroOperationLog(
+        "DECODE",
+        "IR=" + toHex(getRegister("IR")) +
+        " → " + decodedInstruction.mnemonic
+      );
+
+      currentPhase = "EXECUTE";
+      break;
+
+
+case "EXECUTE":
+
+  highlightRegisters(
+    getActiveRegistersForExecution()
+  );
+
+  // Guardamos valores ANTES de ejecutar
+  const registerBefore =
+    decodedInstruction.register
+      ? getRegister(decodedInstruction.register)
+      : null;
+
+  let operandValue = null;
+
+  if (
+    decodedInstruction.mode === "IMMEDIATE" ||
+    decodedInstruction.mode === "REGISTER" ||
+    decodedInstruction.mode === "MEMORY"
+  ) {
+    operandValue = resolveOperand(decodedInstruction);
+  }
+
+  execute();
+
+  let executeMessage = "";
+
+  switch (decodedInstruction.mnemonic) {
+
+    case "MOV":
+      executeMessage =
+        "MOV: " +
+        toHex(operandValue) +
+        " → resultado=" +
+        toHex(executionResult);
+      break;
+
+    case "ADD":
+      executeMessage =
+        "ADD: " +
+        decodedInstruction.register + "=" +
+        toHex(registerBefore) +
+        " + " +
+        toHex(operandValue) +
+        " → resultado=" +
+        toHex(executionResult);
+      break;
+
+    case "SUB":
+      executeMessage =
+        "SUB: " +
+        decodedInstruction.register + "=" +
+        toHex(registerBefore) +
+        " - " +
+        toHex(operandValue) +
+        " → resultado=" +
+        toHex(executionResult);
+      break;
+
+    case "INC":
+      executeMessage =
+        "INC: " +
+        decodedInstruction.register + "=" +
+        toHex(registerBefore) +
+        " → resultado=" +
+        toHex(executionResult);
+      break;
+
+    case "DEC":
+      executeMessage =
+        "DEC: " +
+        decodedInstruction.register + "=" +
+        toHex(registerBefore) +
+        " → resultado=" +
+        toHex(executionResult);
+      break;
+
+    case "LOAD":
+      executeMessage =
+        "LOAD: MAR=" +
+        toHex(getRegister("MAR")) +
+        " → MDR=" +
+        toHex(getRegister("MDR"));
+      break;
+
+    case "STORE":
+      executeMessage =
+        "STORE: " +
+        decodedInstruction.register + "=" +
+        toHex(executionResult) +
+        " → ["
+        + toHex(decodedInstruction.address) + "]";
+      break;
+
+    case "CMP":
+      executeMessage =
+        "CMP: " +
+        decodedInstruction.register + "=" +
+        toHex(registerBefore) +
+        " vs " +
+        toHex(operandValue) +
+        " → ZF=" + getFlag("ZF") +
+        ", CF=" + getFlag("CF") +
+        ", SF=" + getFlag("SF");
+      break;
+
+    case "JMP":
+    case "JZ":
+    case "JNZ":
+      executeMessage =
+        decodedInstruction.mnemonic +
+        ": PC=" + toHex(getRegister("PC"));
+      break;
+
+    case "HLT":
+      executeMessage = "HLT: CPU detenido";
+      break;
+  }
+
+  addMicroOperationLog(
+    "EXECUTE",
+    executeMessage
+  );
+
+  currentPhase = "STORE";
+  break;
+
+    case "STORE":
+
+  highlightRegisters(
+    getActiveRegistersForStore()
+  );
+
+  store();
+
+  let storeMessage = "";
+
+  switch (decodedInstruction.mnemonic) {
+
+    // Estas instrucciones escriben el resultado
+    // en el registro destino.
+    case "MOV":
+    case "ADD":
+    case "SUB":
+    case "INC":
+    case "DEC":
+      storeMessage =
+        "Resultado=" + toHex(executionResult) +
+        " → " + decodedInstruction.register +
+        "=" + toHex(getRegister(decodedInstruction.register));
+      break;
+
+    // LOAD transfiere el dato leído de memoria al registro.
+    case "LOAD":
+      storeMessage =
+        "MDR=" + toHex(getRegister("MDR")) +
+        " → " + decodedInstruction.register +
+        "=" + toHex(getRegister(decodedInstruction.register));
+      break;
+
+    // STORE ya escribió el dato en memoria durante EXECUTE.
+    case "STORE":
+      storeMessage =
+        "MDR=" + toHex(getRegister("MDR")) +
+        " → RAM[" + toHex(decodedInstruction.address) + "]";
+      break;
+
+    // CMP no almacena ningún resultado.
+    case "CMP":
+      storeMessage =
+        "Sin escritura → solo banderas actualizadas";
+      break;
+
+    // Los saltos modifican PC durante EXECUTE.
+    case "JMP":
+    case "JZ":
+    case "JNZ":
+      storeMessage =
+        "Sin escritura → PC=" + toHex(getRegister("PC"));
+      break;
+
+    case "HLT":
+      storeMessage = "Sin escritura";
+      break;
+
+    default:
+      storeMessage = "Sin escritura";
+  }
+
+  addMicroOperationLog(
+    "STORE",
+    storeMessage
+  );
+
+  currentPhase = "FETCH";
+  break;
+
+    default:
+      throw new Error(
+        "Fase desconocida del CPU: " + currentPhase
+      );
+  }
 
   saveExecutionState();
 }
@@ -1455,7 +1670,7 @@ function resetCpu() {
 
   clearRegisterHighlights();  
   clearMemoryHighlight();
-clearMicroOperationLog();
+  clearMicroOperationLog();
 
   // Resultados temporales
   decodedInstruction = null;
@@ -1933,6 +2148,7 @@ function getActiveRegistersForStore() {
       return [];
   }
 }
+
 /**
  * Agrega una micro-operación al log visual del CPU.
  *
