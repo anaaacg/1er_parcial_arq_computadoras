@@ -721,3 +721,137 @@ function testLoadWithMarMdr() {
   Logger.log("PC = " + getRegister("PC"));
 }
 
+function testArithmeticISA() {
+
+  // ========================================
+  // 1. ADD AX, 05h
+  // AX = 03h → resultado esperado = 08h
+  // ========================================
+  Write(0x00, 0x10);
+  Write(0x01, 0x00); // AX
+  Write(0x02, 0x01); // Inmediato
+  Write(0x03, 0x05);
+
+  setRegister("AX", 0x03);
+  setRegister("PC", 0x00);
+
+  instructionCycle();
+
+  Logger.log("--- ADD AX, 05h ---");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("ZF = " + getFlag("ZF"));
+  Logger.log("CF = " + getFlag("CF"));
+  Logger.log("SF = " + getFlag("SF"));
+
+
+  // ========================================
+  // 2. ADD AX, BX
+  // AX = 05h, BX = 03h → 08h
+  // ========================================
+  Write(0x10, 0x10);
+  Write(0x11, 0x00); // AX
+  Write(0x12, 0x00); // Registro
+  Write(0x13, 0x01); // BX
+
+  setRegister("AX", 0x05);
+  setRegister("BX", 0x03);
+  setRegister("PC", 0x10);
+
+  instructionCycle();
+
+  Logger.log("--- ADD AX, BX ---");
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // 3. SUB AX, 03h
+  // AX = 08h → 05h
+  // ========================================
+  Write(0x20, 0x11);
+  Write(0x21, 0x00);
+  Write(0x22, 0x01);
+  Write(0x23, 0x03);
+
+  setRegister("AX", 0x08);
+  setRegister("PC", 0x20);
+
+  instructionCycle();
+
+  Logger.log("--- SUB AX, 03h ---");
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // 4. INC AX
+  // 05h → 06h
+  // ========================================
+  Write(0x30, 0x12);
+  Write(0x31, 0x00);
+
+  setRegister("AX", 0x05);
+  setRegister("PC", 0x30);
+
+  instructionCycle();
+
+  Logger.log("--- INC AX ---");
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // 5. DEC AX
+  // 06h → 05h
+  // ========================================
+  Write(0x40, 0x13);
+  Write(0x41, 0x00);
+
+  setRegister("AX", 0x06);
+  setRegister("PC", 0x40);
+
+  instructionCycle();
+
+  Logger.log("--- DEC AX ---");
+  Logger.log("AX = " + getRegister("AX"));
+
+
+  // ========================================
+  // 6. CMP AX, 05h
+  // AX debe permanecer igual
+  // ========================================
+  Write(0x50, 0x14);
+  Write(0x51, 0x00);
+  Write(0x52, 0x01);
+  Write(0x53, 0x05);
+
+  setRegister("AX", 0x05);
+  setRegister("PC", 0x50);
+
+  instructionCycle();
+
+  Logger.log("--- CMP AX, 05h ---");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("ZF = " + getFlag("ZF"));
+  Logger.log("CF = " + getFlag("CF"));
+  Logger.log("SF = " + getFlag("SF"));
+
+
+  // ========================================
+  // 7. CASO LÍMITE
+  // FFh + 01h → 00h
+  // ========================================
+  Write(0x60, 0x10);
+  Write(0x61, 0x00);
+  Write(0x62, 0x01);
+  Write(0x63, 0x01);
+
+  setRegister("AX", 0xFF);
+  setRegister("PC", 0x60);
+
+  instructionCycle();
+
+  Logger.log("--- FFh + 01h ---");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("ZF = " + getFlag("ZF"));
+  Logger.log("CF = " + getFlag("CF"));
+  Logger.log("SF = " + getFlag("SF"));
+}
+
