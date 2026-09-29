@@ -1036,6 +1036,7 @@ function stepCpu() {
  * fase por fase hasta HLT o PAUSE.
  */
 function runCpu() {
+  updateRunDelayFromInterface();
 
   const MAX_STEPS = 4000;
   let steps = 0;
@@ -1449,4 +1450,38 @@ function loadProgram(program, startAddress) {
 
   // El PC debe comenzar donde fue cargado
   setRegister("PC", startAddress);
+}
+
+
+/**
+ * Obtiene el delay de RUN según la velocidad
+ * seleccionada en la interfaz.
+ */
+function updateRunDelayFromInterface() {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("CPU");
+
+  const speed = sheet
+    .getRange("C16")
+    .getValue();
+
+  switch (speed) {
+
+    case "Lento":
+      setRunDelay(1000);
+      break;
+
+    case "Normal":
+      setRunDelay(500);
+      break;
+
+    case "Rápido":
+      setRunDelay(100);
+      break;
+
+    default:
+      setRunDelay(500);
+  }
 }
