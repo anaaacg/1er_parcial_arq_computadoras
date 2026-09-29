@@ -1101,3 +1101,109 @@ function testStepAndRun() {
   Logger.log("PC final = " + getRegister("PC"));
   Logger.log("CPU detenido = " + cpuHalted);
 }
+
+
+function testJumpsStepAndRun() {
+
+  // ========================================
+  // PROGRAMA DE PRUEBA
+  // ========================================
+
+  // 00h: MOV AX, 05h
+  Write(0x00, 0x01);
+  Write(0x01, 0x00);
+  Write(0x02, 0x01);
+  Write(0x03, 0x05);
+
+  // 04h: CMP AX, 05h
+  // Como AX = 05h → ZF = 1
+  Write(0x04, 0x14);
+  Write(0x05, 0x00);
+  Write(0x06, 0x01);
+  Write(0x07, 0x05);
+
+  // 08h: JZ 10h
+  Write(0x08, 0x21);
+  Write(0x09, 0x10);
+
+  // 0Ah: INC AX
+  // Esta instrucción NO debe ejecutarse
+  Write(0x0A, 0x12);
+  Write(0x0B, 0x00);
+
+  // 10h: INC AX
+  // Esta SÍ debe ejecutarse
+  Write(0x10, 0x12);
+  Write(0x11, 0x00);
+
+  // 12h: HLT
+  Write(0x12, 0xFF);
+
+
+  // ========================================
+  // PRUEBA EN STEP
+  // ========================================
+
+  resetCpuHalt();
+  cpuPaused = false;
+
+  setRegister("AX", 0x00);
+  setRegister("PC", 0x00);
+  setFlag("ZF", 0);
+
+  Logger.log("=== PRUEBA STEP ===");
+
+  // MOV
+  stepCpu();
+
+  Logger.log("Después MOV:");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("PC = " + getRegister("PC"));
+
+  // CMP
+  stepCpu();
+
+  Logger.log("Después CMP:");
+  Logger.log("ZF = " + getFlag("ZF"));
+  Logger.log("PC = " + getRegister("PC"));
+
+  // JZ
+  stepCpu();
+
+  Logger.log("Después JZ:");
+  Logger.log("PC = " + getRegister("PC"));
+
+  // INC ubicado en 10h
+  stepCpu();
+
+  Logger.log("Después INC destino:");
+  Logger.log("AX = " + getRegister("AX"));
+  Logger.log("PC = " + getRegister("PC"));
+
+  // HLT
+  stepCpu();
+
+  Logger.log("Después HLT:");
+  Logger.log("CPU detenido = " + cpuHalted);
+
+
+  // ========================================
+  // PRUEBA EN RUN
+  // ========================================
+
+  resetCpuHalt();
+  cpuPaused = false;
+
+  setRegister("AX", 0x00);
+  setRegister("PC", 0x00);
+  setFlag("ZF", 0);
+
+  Logger.log("=== PRUEBA RUN ===");
+
+  runCpu();
+
+  Logger.log("AX final = " + getRegister("AX"));
+  Logger.log("PC final = " + getRegister("PC"));
+  Logger.log("ZF final = " + getFlag("ZF"));
+  Logger.log("CPU detenido = " + cpuHalted);
+}
