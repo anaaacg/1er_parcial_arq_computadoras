@@ -70,6 +70,8 @@ function Write(address, value) {
     throw new Error("Valor de 8 bits inválido: " + value);
   }
 
+  highlightMemory(address);
+
   const position = addressToCell(address);
 
   const sheet = SpreadsheetApp
@@ -107,6 +109,8 @@ function Read(address) {
   if (!isValidAddress(address)) {
     throw new Error("Dirección de memoria inválida: " + address);
   }
+
+  highlightMemory(address);
 
   const position = addressToCell(address);
 
@@ -222,7 +226,6 @@ const CODE_END   = 0x7F;
 const DATA_START = 0x80;
 const DATA_END   = 0xFF;
 
-
 function testMemory() {
   Logger.log("=== PRUEBAS DE MEMORIA RAM ===");
 
@@ -271,6 +274,65 @@ function testMemory() {
   }
 
   Logger.log("=== FIN DE PRUEBAS ===");
+}
+/**
+ * Elimina el resaltado de todas las posiciones de RAM.
+ */
+function clearMemoryHighlight() {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("RAM");
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "RAM".');
+  }
+
+  sheet
+    .getRange("B4:Q19")
+    .setBackground(null);
+}
+
+
+/**
+ * Resalta una dirección específica de RAM.
+ *
+ * 00h = B4
+ * FFh = Q19
+ *
+ * @param {number} address Dirección entre 0 y 255.
+ */
+function highlightMemory(address) {
+
+  if (
+    !Number.isInteger(address) ||
+    address < 0 ||
+    address > 0xFF
+  ) {
+    throw new Error(
+      "Dirección de memoria inválida: " + address
+    );
+  }
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName("RAM");
+
+  if (!sheet) {
+    throw new Error('No existe la hoja "RAM".');
+  }
+
+  clearMemoryHighlight();
+
+  const row = Math.floor(address / 16);
+  const column = address % 16;
+
+  sheet
+    .getRange(
+      4 + row,
+      2 + column
+    )
+    .setBackground("#FFF2CC");
 }
 
 
