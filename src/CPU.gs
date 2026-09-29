@@ -39,7 +39,7 @@ const ADDRESSING_MODES = {
 
 let decodedInstruction = null;
 let executionResult = null;
-
+let cpuHalted = false;
 
 
 // ============================================
@@ -331,9 +331,8 @@ function execute() {
       break;
 
     case "HLT":
-      // La detención completa del reloj se conectará
-      // posteriormente con el control de ejecución.
       executionResult = null;
+      cpuHalted = true;
       break;
 
     default:
@@ -585,6 +584,11 @@ function testStore() {
 // ============================================
 
 function instructionCycle() {
+
+  if (cpuHalted) {
+    return;
+  }
+
   fetch();
   decode();
   execute();
@@ -855,3 +859,119 @@ function testArithmeticISA() {
   Logger.log("SF = " + getFlag("SF"));
 }
 
+function testControlFlow() {
+
+  // ========================================
+  // 1. JMP 40h
+  // Debe saltar siempre
+  // ========================================
+  Write(0x00, 0x20);
+  Write(0x01, 0x40);
+
+  setRegister("PC", 0x00);
+
+  instructionCycle();
+
+  Logger.log("--- JMP 40h ---");
+  Logger.log("PC = " + getRegister("PC"));
+
+
+  // ========================================
+  // 2. JZ 50h con ZF = 1
+  // DEBE saltar
+  // ========================================
+  Write(0x10, 0x21);
+  Write(0x11, 0x50);
+
+  setRegister("PC", 0x10);
+  setFlag("ZF", 1);
+
+  instructionCycle();
+
+  Logger.log("--- JZ 50h con ZF=1 ---");
+  Logger.log("PC = " + getRegister("PC"));
+
+
+  // ========================================
+  // 3. JZ 50h con ZF = 0
+  // NO debe saltar
+  // ========================================
+  Write(0x20, 0x21);
+  Write(0x21, 0x50);
+
+  setRegister("PC", 0x20);
+  setFlag("ZF", 0);
+
+  instructionCycle();
+
+  Logger.log("--- JZ 50h con ZF=0 ---");
+  Logger.log("PC = " + getRegister("PC"));
+
+
+  // ========================================
+  // 4. JNZ 60h con ZF = 0
+  // DEBE saltar
+  // ========================================
+  Write(0x30, 0x22);
+  Write(0x31, 0x60);
+
+  setRegister("PC", 0x30);
+  setFlag("ZF", 0);
+
+  instructionCycle();
+
+  Logger.log("--- JNZ 60h con ZF=0 ---");
+  Logger.log("PC = " + getRegister("PC"));
+
+
+  // ========================================
+  // 5. JNZ 60h con ZF = 1
+  // NO debe saltar
+  // ========================================
+  Write(0x40, 0x22);
+  Write(0x41, 0x60);
+
+  setRegister("PC", 0x40);
+  setFlag("ZF", 1);
+
+  instructionCycle();
+
+  Logger.log("--- JNZ 60h con ZF=1 ---");
+  Logger.log("PC = " + getRegister("PC"));
+}
+
+function resetCpuHalt() {
+  cpuHalted = false;
+}
+
+function testHalt() {
+
+  resetCpuHalt();
+
+  // HLT en 00h
+  Write(0x00, 0xFF);
+
+  // Una instrucción después de HLT
+  // INC AX
+  Write(0x01, 0x12);
+  Write(0x02, 0x00);
+
+  setRegister("AX", 0x05);
+  setRegister("PC", 0x00);
+
+  // Ejecuta HLT
+  instructionCycle();
+
+  Logger.log("--- DESPUÉS DE HLT ---");
+  Logger.log("CPU detenido = " + cpuHalted);
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+
+  // Intentamos ejecutar INC AX
+  instructionCycle();
+
+  Logger.log("--- INTENTO DESPUÉS DE HLT ---");
+  Logger.log("CPU detenido = " + cpuHalted);
+  Logger.log("PC = " + getRegister("PC"));
+  Logger.log("AX = " + getRegister("AX"));
+}
