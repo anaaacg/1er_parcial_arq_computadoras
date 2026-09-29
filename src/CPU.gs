@@ -294,6 +294,7 @@ function execute() {
 
     case "LOAD":
       // Dirección de memoria → MAR
+      highlightMemory(decodedInstruction.address);
       setRegister("MAR", instruction.address);
 
       // RAM[MAR] → MDR
@@ -310,6 +311,7 @@ function execute() {
     case "STORE":
       // Prepara el valor del registro para que Store
       // lo escriba posteriormente en memoria.
+      highlightMemory(decodedInstruction.address);
       executionResult = getRegister(instruction.register);
       break;
 
@@ -1417,6 +1419,7 @@ function resetCpu() {
   updatePhaseDisplay("FETCH");
 
   clearRegisterHighlights();  
+  clearMemoryHighlight();
 
   // Resultados temporales
   decodedInstruction = null;
